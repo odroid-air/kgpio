@@ -1,0 +1,18 @@
+maintainer: sebas
+description: GPIO interface
+tier: 1
+type: functional
+platforms:
+    - name: Linux
+    - name: Android
+portingAid: false
+deprecated: false
+release: true
+libraries:
+ - qmake: KGpio
+   cmake: "KF5::Gpio"
+cmakename: KF5Gpio
+
+public_lib: true
+group: Frameworks
+subgroup: Tier 1
