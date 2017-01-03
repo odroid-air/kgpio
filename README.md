@@ -7,6 +7,10 @@ Reading, creating, and manipulating gpio pins through Linux' sysfs interface
 KGpio provides classes for easy reading, creation and manipulation of
 GPIO pins through the Linux kernel's sysfs interface found in /sys/class/gpio.
 
+KGpio implements the protocol described at
+https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
+as a Qt-style library.
+
 
 ## Usage
 
