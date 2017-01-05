@@ -1,0 +1,3 @@
+module org.kde.kgpio
+plugin kgpioplugin
+
