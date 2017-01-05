@@ -24,6 +24,7 @@ License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QtTest/QtTest>
 #include <QtCore/QFileInfo>
+#include <QSignalSpy>
 
 namespace KGpio {
 
@@ -82,6 +83,10 @@ void KGpioTest::testPinCreation()
 void KGpioTest::testPins()
 {
     auto pin = KGpio::KGpio::self()->pin(83);
+    QSignalSpy initSpy(pin, &GpioPin::initialized);
+
+    QVERIFY(initSpy.wait());
+
     qDebug() << "pin direction:" << ((pin->direction() == GpioPin::In) ? "In!" : "Out!");
 
     pin->setDirection(GpioPin::Out);
@@ -92,6 +97,7 @@ void KGpioTest::testPins()
         qDebug() << "pin error:" << pin->errorString() ;
         return;
     }
+
     while (i <= 10) {
         pin->setValue(GpioPin::High);
         QTest::qWait(interval);
