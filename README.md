@@ -7,10 +7,6 @@ Reading, creating, and manipulating gpio pins through Linux' sysfs interface
 KGpio provides classes for easy reading, creation and manipulation of
 GPIO pins through the Linux kernel's sysfs interface found in /sys/class/gpio.
 
-KGpio implements the protocol described at
-https://www.kernel.org/doc/Documentation/gpio/sysfs.txt
-as a Qt-style library.
-
 
 ## Usage
 
@@ -33,6 +29,7 @@ deb-src http://snapshot.debian.org/archive/debian/20161211/ testing-updates main
 then install the build dependencies for a tier1 library, installs a bit too much, but in any way
 sufficient for our purposes:
  sudo apt-get build-dep libkf5archive5
+ sudo apt-get build-dep plasma-framework
 
 make the gpio pins writable (TODO: use group permissions here):
 
@@ -40,3 +37,6 @@ make the gpio pins writable (TODO: use group permissions here):
 
 SUBSYSTEM=="subsystem", KERNEL=="gpio*",  ACTION=="add", PROGRAM="/bin/sh -c 'chown -R sebas:users /sys%p'"
 SUBSYSTEM=="gpio", KERNEL=="gpio*",  ACTION=="add", PROGRAM="/bin/sh -c 'chown -R sebas:users /sys%p/*'"
+
+
+core.sebas(/etc/xdg/autostart): vim plasmashell.desktop
