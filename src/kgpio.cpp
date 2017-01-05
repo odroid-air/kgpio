@@ -46,6 +46,7 @@ KGpio::KGpio()
 KGpio::~KGpio()
 {
     s_kgpio = nullptr;
+    qDeleteAll(d->pins);
     delete d;
 }
 
