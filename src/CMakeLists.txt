@@ -62,31 +62,12 @@ ecm_generate_headers(KGpio_HEADERS
     HEADER_NAMES
     KGpio
     GpioPin
-#     KGpioEntry
-#     KGpioFile
-#     KGpioDirectory
-#     KAr
-#     KCompressionDevice
-#     KFilterBase
-#     KFilterDev
-#     KTar
-#     KZip
-#     KZipFileEntry
-#
     REQUIRED_HEADERS KGpio_HEADERS
 )
 
 install(TARGETS KF5Gpio
         EXPORT KF5GpioTargets
         ${KF5_INSTALL_TARGETS_DEFAULT_ARGS})
-
-# if(LIBLZMA_FOUND)
-#     ecm_generate_headers(KGpio_HEADERS
-#         HEADER_NAMES
-#         K7Zip
-#         REQUIRED_HEADERS KGpio_HEADERS
-#     )
-# endif()
 
 install(FILES
             ${CMAKE_CURRENT_BINARY_DIR}/kgpio_export.h
@@ -98,4 +79,6 @@ include(ECMGeneratePriFile)
 ecm_generate_pri_file(BASE_NAME KGpio LIB_NAME KF5Gpio DEPS "core" FILENAME_VAR PRI_FILENAME INCLUDE_INSTALL_DIR ${KDE_INSTALL_INCLUDEDIR_KF5}/KGpio)
 install(FILES ${PRI_FILENAME}
         DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
+
+add_subdirectory(import)
 
