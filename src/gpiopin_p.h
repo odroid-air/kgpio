@@ -24,6 +24,9 @@ License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "kgpio.h"
 
+class QTimer;
+class QElapsedTimer;
+
 namespace KGpio {
 
 class GpioPinPrivate
@@ -31,23 +34,32 @@ class GpioPinPrivate
     Q_DECLARE_TR_FUNCTIONS(GpioPinPrivate)
 
 public:
-    GpioPinPrivate()
-        : error(GpioPin::Uninitialized)
+    GpioPinPrivate(GpioPin *_q)
+        : q(_q)
+        , error(GpioPin::Uninitialized)
         , pinNumber(0)
     {
     }
     ~GpioPinPrivate()
     {
     }
+    GpioPin* q;
 
     void checkErrors();
+    void checkInitialized();
     bool nodeExists() const;
     QString nodePath() const;
     bool exportPin();
     bool unexportPin();
 
+    bool writeToFile(const QString &filename, const QString &content);
+
     GpioPin::PinError error;
     int pinNumber = 0;
+    bool manageNode = false;
+
+    QElapsedTimer* elapsedTimer;
+    QTimer* initializationTimer;
 };
 
 }

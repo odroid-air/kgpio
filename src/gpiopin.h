@@ -78,6 +78,10 @@ public:
     GpioPin::Value value() const;
     void setValue(const GpioPin::Value &val);
 
+Q_SIGNALS:
+    void initialized();
+    void initializationFailed();
+
 private:
     GpioPinPrivate *const d;
 };

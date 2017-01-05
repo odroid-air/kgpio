@@ -24,14 +24,16 @@ License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QDir>
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QFileInfo>
+#include <QTimer>
 
 
 namespace KGpio {
 
 GpioPin::GpioPin(int id, QObject *parent)
     : QObject(parent)
-    , d(new GpioPinPrivate)
+    , d(new GpioPinPrivate(this))
 {
     d->pinNumber = id;
     d->error = NoError;
@@ -39,14 +41,68 @@ GpioPin::GpioPin(int id, QObject *parent)
         qDebug() << "exporting..." << d->nodePath();
         d->exportPin();
     }
-    qDebug() << "NOde??" << d->nodeExists();
+    //qDebug() << "NOde??" << d->nodeExists();
     d->checkErrors();
 
+    if (d->error == GpioPin::NoError) {
+        QTimer::singleShot(0, this, [this] {
+            //qDebug() << "inited in ctor";
+            Q_EMIT initialized();
+
+        });
+    } else {
+        d->elapsedTimer = new QElapsedTimer();
+        d->elapsedTimer->start();
+        d->initializationTimer = new QTimer(this);
+        d->initializationTimer->setInterval(1);
+        connect(d->initializationTimer, &QTimer::timeout, this, [this] {
+            d->checkInitialized();
+            if (d->error == NoError) {
+                qDebug() << "+++ Initialized after:" << d->elapsedTimer->elapsed();
+
+                d->initializationTimer->deleteLater();
+                d->initializationTimer = nullptr;
+                delete d->elapsedTimer;
+                d->elapsedTimer = nullptr;
+
+                Q_EMIT initialized();
+            } else if (d->elapsedTimer->elapsed() > 500) {
+                qDebug() << "+++ Initializion FAILED after:" << d->elapsedTimer->elapsed();
+                d->initializationTimer->deleteLater();
+                d->initializationTimer = nullptr;
+                delete d->elapsedTimer;
+                d->elapsedTimer = nullptr;
+
+                Q_EMIT initializationFailed();
+            }
+        });
+        d->initializationTimer->start();
+    }
 }
 
 GpioPin::~GpioPin()
 {
+    if (d->manageNode) {
+        d->unexportPin();
+    }
     delete d;
+}
+
+void GpioPinPrivate::checkInitialized()
+{
+    // check and wait for some files to be initialized
+    const QStringList writableFiles({QStringLiteral("direction"), QStringLiteral("value")});
+    error = GpioPin::NoError;
+
+    for (const auto &f : writableFiles) {
+        const QString _f = QString(QStringLiteral("%1%2")).arg(nodePath(), f);
+        if (!QFileInfo(_f).exists() || !QFileInfo(_f).isWritable()) {
+            //qWarning() << "Permission problem: " << _f << " exists?" << QFileInfo(_f).exists() << "writable?" << QFileInfo(_f).isWritable();
+            error = GpioPin::DirectionNotWritable;
+            return;
+        }
+    }
+    checkErrors();
 }
 
 GpioPin::PinError GpioPin::error() const
@@ -108,30 +164,40 @@ void GpioPinPrivate::checkErrors()
 
 }
 
-bool GpioPinPrivate::exportPin()
+bool GpioPinPrivate::writeToFile(const QString &filename, const QString &content)
 {
-    QFile d_file(QString(QStringLiteral("%1export")).arg(KGpio::self()->sysfsPath()));
+    QFile d_file(filename);
     d_file.open(QIODevice::WriteOnly | QIODevice::Text);
 
     if(!d_file.isOpen()){
-        //qDebug() << "- Error, unable to open" << "outputFilename" << "for output";
+        qDebug() << "- Error, unable to open" << filename << "for output";
         return false;
     }
     QTextStream outStream(&d_file);
-    outStream << QString::number(pinNumber) << endl;
+    outStream << content << endl;
     d_file.close();
     return true;
 }
 
+bool GpioPinPrivate::exportPin()
+{
+    const QString fname = QString(QStringLiteral("%1export")).arg(KGpio::self()->sysfsPath());
+    if (writeToFile(fname, QString::number(pinNumber))) {
+        manageNode = true;
+        return true;
+    }
+    return false;
+}
+
 bool GpioPinPrivate::unexportPin()
 {
-    return true;
+    const QString fname = QString(QStringLiteral("%1unexport")).arg(KGpio::self()->sysfsPath());
+    return writeToFile(fname, QString::number(pinNumber));
 }
 
 bool GpioPinPrivate::nodeExists() const
 {
     return QFileInfo(QString(QStringLiteral("%1direction")).arg(nodePath())).exists();
- //   return QFileInfo(nodePath()).exists();
 }
 
 QString GpioPinPrivate::nodePath() const
@@ -158,21 +224,12 @@ GpioPin::Direction GpioPin::direction() const
 
 void GpioPin::setDirection(const GpioPin::Direction &dir)
 {
-    QFile d_file(QString(QStringLiteral("%1direction")).arg(d->nodePath()));
-    d_file.open(QIODevice::WriteOnly | QIODevice::Text);
-
-    if(!d_file.isOpen()){
-        //qDebug() << "- Error, unable to open" << "outputFilename" << "for output";
-        d->error = DirectionNotWritable;
-        return;
-    }
-    QTextStream outStream(&d_file);
+    const QString fname = QString(QStringLiteral("%1direction")).arg(d->nodePath());
     if (dir == GpioPin::In) {
-        outStream << QStringLiteral("in\n");
+        d->writeToFile(fname, QStringLiteral("in"));
     } else {
-        outStream << QStringLiteral("out\n");
+        d->writeToFile(fname, QStringLiteral("out"));
     }
-    d_file.close();
 }
 
 GpioPin::Value GpioPin::value() const
@@ -182,22 +239,13 @@ GpioPin::Value GpioPin::value() const
 
 void GpioPin::setValue(const GpioPin::Value &val)
 {
-    QFile d_file(QString(QStringLiteral("%1value")).arg(d->nodePath()));
-    d_file.open(QIODevice::WriteOnly | QIODevice::Text);
-
-    if(!d_file.isOpen()){
-        d->error = ValueNotWritable;
-        return;
-        //qDebug() << "- Error, unable to open" << "outputFilename" << "for output";
-    }
-    QTextStream outStream(&d_file);
+    const QString fname = QString(QStringLiteral("%1value")).arg(d->nodePath());
     if (val == GpioPin::Low) {
-        outStream << QStringLiteral("0\n");
+        d->writeToFile(fname, QStringLiteral("0"));
     } else {
-        outStream << QStringLiteral("1\n");
+        d->writeToFile(fname, QStringLiteral("1"));
     }
-    d_file.close();
 }
 
 
-}
+} // ns
