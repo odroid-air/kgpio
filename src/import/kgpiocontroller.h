@@ -55,6 +55,7 @@ class KGPIO_EXPORT KGpioController : public QObject
         void pinsChanged();
 
     private:
+        void loadPin(const int pinNumber);
         QScopedPointer<KGpioControllerPrivate> d;
 };
 

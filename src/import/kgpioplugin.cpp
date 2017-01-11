@@ -20,6 +20,8 @@
 #include "kgpioplugin.h"
 #include "kgpiocontroller.h"
 
+#include <gpiopin.h>
+
 #include <QtQml>
 #include <QQmlEngine>
 
@@ -35,6 +37,7 @@ void KGpioPlugin::initializeEngine(QQmlEngine *engine, const char *uri)
 
 void KGpioPlugin::registerTypes(const char *uri)
 {
-    Q_ASSERT(QLatin1String(uri) == QLatin1String("org.kde.kwin.windowmetadata.client"));
+    Q_ASSERT(QLatin1String(uri) == QLatin1String("org.kde.kgpio"));
     qmlRegisterType<KGpioController>(uri, 1, 0, "KGpioController");
+    qmlRegisterUncreatableType<GpioPin>(uri, 1, 0, "GpioPin", QStringLiteral("I can't do that, Dave."));
 }

@@ -44,15 +44,27 @@ KGpioController::KGpioController(QObject* parent) :
     d(new KGpioControllerPrivate)
 {
     d->q = this;
-    auto pin = KGpio::KGpio::self()->pin(83);
-    connect(pin, &GpioPin::initialized, this, [this, pin] {
-        d->pins.append(pin);
-        Q_EMIT pinsChanged();
-    });
+
+    loadPin(108);
+    loadPin(97);
+    loadPin(100);
 }
 
 KGpioController::~KGpioController()
 {
+}
+
+void KGpioController::loadPin(const int pinNumber)
+{
+
+    auto pin = KGpio::KGpio::self()->pin(pinNumber);
+    connect(pin, &GpioPin::initialized, this, [this, pin] {
+        qDebug() << "new pin!" << pin->number();
+        pin->setDirection(GpioPin::Out);
+        d->pins.append(pin);
+        Q_EMIT pinsChanged();
+    });
+
 }
 
 void KGpioController::pinAdded(KGpio::GpioPin* pin)
