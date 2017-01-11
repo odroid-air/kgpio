@@ -24,6 +24,7 @@
 set(kgpio_SRCS
     kgpio.cpp
     gpiopin.cpp
+    lightsensor.cpp
 #     kar.cpp
 #     kcompressiondevice.cpp
 #     kfilterbase.cpp
@@ -62,6 +63,7 @@ ecm_generate_headers(KGpio_HEADERS
     HEADER_NAMES
     KGpio
     GpioPin
+    LightSensor
     REQUIRED_HEADERS KGpio_HEADERS
 )
 
