@@ -58,8 +58,8 @@ public:
     int pinNumber = 0;
     bool manageNode = false;
 
-    QElapsedTimer* elapsedTimer;
-    QTimer* initializationTimer;
+    QElapsedTimer* elapsedTimer = nullptr;
+    QTimer* initializationTimer = nullptr;
 };
 
 }

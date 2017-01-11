@@ -38,6 +38,10 @@ class KGPIO_EXPORT GpioPin : public QObject
 {
     Q_OBJECT
 
+    Q_PROPERTY(int number READ number CONSTANT)
+    Q_PROPERTY(GpioPin::Direction direction READ direction WRITE setDirection NOTIFY directionChanged)
+    Q_PROPERTY(GpioPin::Value pinValue READ value WRITE setValue NOTIFY valueChanged)
+
 public:
 
     enum PinError {
@@ -48,19 +52,20 @@ public:
         DirectionNotWritable = 8,
         ValueNotWritable = 16
     };
-    Q_ENUMS(PinError)
+    Q_ENUM(PinError)
+    Q_DECLARE_FLAGS(PinErrors, PinError)
 
     enum Direction {
         In = 0,
         Out = 1
     };
-    Q_ENUMS(Direction)
+    Q_ENUM(Direction)
 
     enum Value {
         Low = 0,
         High = 1
     };
-    Q_ENUMS(Value)
+    Q_ENUM(Value)
 
     /**
      * Base constructor.
@@ -78,13 +83,24 @@ public:
     GpioPin::Value value() const;
     void setValue(const GpioPin::Value &val);
 
+    int number() const;
+
+    Q_INVOKABLE void writeValue(const QString &val);
+
 Q_SIGNALS:
     void initialized();
     void initializationFailed();
+
+    void directionChanged();
+    void valueChanged();
 
 private:
     GpioPinPrivate *const d;
 };
 
 } // namespace
+
+
+Q_DECLARE_METATYPE(KGpio::GpioPin*)
+
 #endif

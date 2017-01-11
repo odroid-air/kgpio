@@ -26,6 +26,7 @@ License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QFileInfo>
+#include <QProcess>
 #include <QTimer>
 
 
@@ -58,7 +59,7 @@ GpioPin::GpioPin(int id, QObject *parent)
         connect(d->initializationTimer, &QTimer::timeout, this, [this] {
             d->checkInitialized();
             if (d->error == NoError) {
-                qDebug() << "+++ Initialized after:" << d->elapsedTimer->elapsed();
+                qDebug() << "+++ Initialized pin" << d->pinNumber << "after:" << d->elapsedTimer->elapsed();
 
                 d->initializationTimer->deleteLater();
                 d->initializationTimer = nullptr;
@@ -67,7 +68,7 @@ GpioPin::GpioPin(int id, QObject *parent)
 
                 Q_EMIT initialized();
             } else if (d->elapsedTimer->elapsed() > 500) {
-                qDebug() << "+++ Initializion FAILED after:" << d->elapsedTimer->elapsed();
+                qDebug() << "+++ Initializion of pin" << d->pinNumber << "FAILED after:" << d->elapsedTimer->elapsed();
                 d->initializationTimer->deleteLater();
                 d->initializationTimer = nullptr;
                 delete d->elapsedTimer;
@@ -103,6 +104,11 @@ void GpioPinPrivate::checkInitialized()
         }
     }
     checkErrors();
+}
+
+int GpioPin::number() const
+{
+    return d->pinNumber;
 }
 
 GpioPin::PinError GpioPin::error() const
@@ -166,16 +172,28 @@ void GpioPinPrivate::checkErrors()
 
 bool GpioPinPrivate::writeToFile(const QString &filename, const QString &content)
 {
+    //auto _content = QString(QStringLiteral("%1\n")).arg(content);
+    auto _content = content;
     QFile d_file(filename);
     d_file.open(QIODevice::WriteOnly | QIODevice::Text);
 
-    if(!d_file.isOpen()){
+//     qDebug() << "Writing" << content << "to" << filename;
+    if (!d_file.isOpen()){
         qDebug() << "- Error, unable to open" << filename << "for output";
         return false;
     }
     QTextStream outStream(&d_file);
-    outStream << content << endl;
+    outStream << _content;
+//     auto wret = d_file.write(content.toLocal8Bit());
+//     if (wret == -1) {
+//         qDebug() << "- Write Error, " << filename << " e: " << d_file.error();
+//     }
+//     d_file.flush();
     d_file.close();
+//     qDebug() << "Wrote ..." << _content << filename;
+    QProcess p;
+    p.start(QStringLiteral("sync"));
+    p.waitForFinished();
     return true;
 }
 
@@ -234,18 +252,45 @@ void GpioPin::setDirection(const GpioPin::Direction &dir)
 
 GpioPin::Value GpioPin::value() const
 {
-    return GpioPin::High;
+    QFile d_file(QString(QStringLiteral("%1value")).arg(d->nodePath()));
+    d_file.open(QIODevice::ReadOnly | QIODevice::Text);
+    if(!d_file.isOpen()){
+        qDebug() << "- Error, unable to open" << "outputFilename" << "for output";
+        d->error = GpioPin::PermissionDenied;
+        return GpioPin::Low;
+    }
+    QByteArray inputData = d_file.readAll();
+//     qDebug() << "Value is: " << inputData << "in?" << (inputData.startsWith(QStringLiteral("1").toLocal8Bit()));
+    if (inputData.startsWith(QStringLiteral("1").toLocal8Bit())) {
+        return GpioPin::High;
+    }
+    return GpioPin::Low;
 }
 
 void GpioPin::setValue(const GpioPin::Value &val)
 {
     const QString fname = QString(QStringLiteral("%1value")).arg(d->nodePath());
+    QFileInfo fi(fname);
+
     if (val == GpioPin::Low) {
         d->writeToFile(fname, QStringLiteral("0"));
     } else {
         d->writeToFile(fname, QStringLiteral("1"));
     }
+    if (val != value()) {
+        qDebug() << "FAILED TO WRITE" << val << value() << direction() << fname;
+        qDebug() << "   FileInfo: exists" << fi.exists() << "writable? " << fi.isWritable();
+    } else {
+        //qDebug() << "VAL OK!!";
+    }
 }
+
+void GpioPin::writeValue(const QString& val)
+{
+    const QString fname = QString(QStringLiteral("%1value")).arg(d->nodePath());
+    d->writeToFile(fname, val);
+}
+
 
 
 } // ns
