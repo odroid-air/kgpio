@@ -32,9 +32,25 @@ namespace KGpio {
 class LightSensorPrivate;
 
 /**
- * LightSensor is a base class for reading and writing GPIO pins.
- * @short generic class for reading/writing gpio pins
- * @author Sebastian Kügler <sebas@kde.org>
+    This class represents a digital lightsensor, it works as follows:
+
+    - The pin is initialized (exported, waited for permission change from
+    udev
+    - The pin direction is set to Out, which in turn sets its value to Low
+    - The capacitors are now being charged, when they're charge enough,
+    value will go from Low to High
+    - We monitor the value and record the brightness when it changes to High
+    - We now reset the pin by switching direction to Out (sets value to
+    Low), and then to In
+    - ... and we wait again
+
+    See also:
+    * https://www.raspberrypi.org/learning/physical-computing-with-python/ldr/
+    * https://learn.adafruit.com/basic-resistor-sensor-reading-on-raspberry-pi/basic-photocell-reading
+    * https://pimylifeup.com/raspberry-pi-light-sensor/
+
+    @short generic class for reading/writing gpio pins
+    @author Sebastian Kügler <sebas@kde.org>
  */
 class KGPIO_EXPORT LightSensor : public GpioPin
 {
@@ -47,7 +63,7 @@ public:
     /**
      * Base constructor.
      */
-    LightSensor(int id, QObject *parent = nullptr);
+    LightSensor(int id = -1, QObject *parent = nullptr);
 
     virtual ~LightSensor();
 
@@ -57,6 +73,7 @@ Q_SIGNALS:
     void brightnessChanged();
 
 private:
+    void init();
     LightSensorPrivate *const d;
 };
 
