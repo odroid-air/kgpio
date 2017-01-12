@@ -68,12 +68,14 @@ void KGpioTest::cleanupTestCase()
 
 void KGpioTest::testPinCreation()
 {
-    return;
+    //return;
     auto pin = KGpio::KGpio::self()->pin(100);
     QVERIFY(pin != nullptr);
 
     auto pin100 = KGpio::KGpio::self()->pin(100);
-    auto pin108 = KGpio::KGpio::self()->pin(108);
+    auto pin108 = new GpioPin();
+    pin108->setNumber(108);
+    pin108->setValue(GpioPin::High);
     auto pin97 = KGpio::KGpio::self()->pin(97);
     QCOMPARE(pin, pin100);
     QVERIFY(pin != pin108);
@@ -85,7 +87,7 @@ void KGpioTest::testPinCreation()
     QVERIFY(pin86->error() == GpioPin::NoSysFs);
 
     delete KGpio::KGpio::self();
-
+    delete pin108;
     //auto pin87 = KGpio::KGpio::self()->pin(87);
     //QVERIFY(pin87->error() == GpioPin::PermissionDenied);
 }
@@ -153,6 +155,9 @@ void KGpioTest::testLowLevelLightSensor()
 {
 //     return;
     auto light = new LightSensor(104, this);
+    QSignalSpy initSpy(light, &GpioPin::initialized);
+    QVERIFY(initSpy.wait());
+
     light->setDirection(GpioPin::Out);
     light->setValue(GpioPin::Low);
     qDebug() << "Light:" << light->direction() << light->value() << light->brightness();
