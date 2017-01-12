@@ -38,7 +38,7 @@ class KGPIO_EXPORT GpioPin : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(int number READ number CONSTANT)
+    Q_PROPERTY(int number READ number WRITE setNumber NOTIFY numberChanged)
     Q_PROPERTY(GpioPin::Direction direction READ direction WRITE setDirection NOTIFY directionChanged)
     Q_PROPERTY(GpioPin::Value pinValue READ value WRITE setValue NOTIFY valueChanged)
 
@@ -70,7 +70,7 @@ public:
     /**
      * Base constructor.
      */
-    GpioPin(int id, QObject *parent = nullptr);
+    GpioPin(int id = -1, QObject *parent = nullptr);
 
     virtual ~GpioPin();
 
@@ -84,6 +84,7 @@ public:
     void setValue(const GpioPin::Value &val);
 
     int number() const;
+    void setNumber(const int pinNumber);
 
     Q_INVOKABLE void writeValue(const QString &val);
 
@@ -92,9 +93,11 @@ Q_SIGNALS:
     void initializationFailed();
 
     void directionChanged();
+    void numberChanged();
     void valueChanged();
 
 private:
+    void init();
     GpioPinPrivate *const d;
 };
 

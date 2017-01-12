@@ -36,7 +36,13 @@ GpioPin::GpioPin(int id, QObject *parent)
     : QObject(parent)
     , d(new GpioPinPrivate(this))
 {
-    d->pinNumber = id;
+    if (id != -1) {
+        d->pinNumber = id;
+        init();
+    }
+}
+void GpioPin::init()
+{
     d->error = NoError;
     if (!d->nodeExists()) {
         qDebug() << "exporting..." << d->nodePath();
@@ -80,6 +86,18 @@ GpioPin::GpioPin(int id, QObject *parent)
         d->initializationTimer->start();
     }
 }
+
+void GpioPin::setNumber(const int pinNumber)
+{
+    if (d->pinNumber != -1 && pinNumber != -1) {
+        d->pinNumber = pinNumber;
+        init();
+        Q_EMIT numberChanged();
+    } else if (d->pinNumber != pinNumber) {
+        qWarning() << "pins can only be initialized once";
+    }
+}
+
 
 GpioPin::~GpioPin()
 {
@@ -175,7 +193,7 @@ bool GpioPinPrivate::writeToFile(const QString &filename, const QString &content
     //auto _content = QString(QStringLiteral("%1\n")).arg(content);
     auto _content = content;
     QFile d_file(filename);
-    d_file.open(QIODevice::WriteOnly | QIODevice::Text);
+    d_file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Unbuffered);
 
 //     qDebug() << "Writing" << content << "to" << filename;
     if (!d_file.isOpen()){
@@ -190,10 +208,22 @@ bool GpioPinPrivate::writeToFile(const QString &filename, const QString &content
 //     }
 //     d_file.flush();
     d_file.close();
+    //return true;
 //     qDebug() << "Wrote ..." << _content << filename;
-    QProcess p;
-    p.start(QStringLiteral("sync"));
-    p.waitForFinished();
+    /*
+    The files in sysfs don't support O_SYNC (but should be sync'ed anyway,
+    which they aren't, even using echo). fsync doesn't work because of that,
+    but the 5k pound hammer (QProcess(sync) helps), so use that for now until
+    we find a real solution
+    */
+    bool sync = (filename.endsWith(QStringLiteral("/direction"))
+                 || filename.endsWith(QStringLiteral("/value")))
+                && (QString::fromLocal8Bit(q->metaObject()->className()).compare(QStringLiteral("KGpio::LightSensor")) == 0);
+    if (sync) {
+        QProcess p;
+        p.start(QStringLiteral("sync"));
+        p.waitForFinished();
+    }
     return true;
 }
 

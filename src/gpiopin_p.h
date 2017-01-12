@@ -55,7 +55,7 @@ public:
     bool writeToFile(const QString &filename, const QString &content);
 
     GpioPin::PinError error;
-    int pinNumber = 0;
+    int pinNumber = -1;
     bool manageNode = false;
 
     QElapsedTimer* elapsedTimer = nullptr;
