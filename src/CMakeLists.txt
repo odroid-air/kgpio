@@ -25,6 +25,7 @@ set(kgpio_SRCS
     kgpio.cpp
     gpiopin.cpp
     lightsensor.cpp
+    thermosensor.cpp
 #     kar.cpp
 #     kcompressiondevice.cpp
 #     kfilterbase.cpp

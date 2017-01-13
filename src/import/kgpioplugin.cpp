@@ -22,6 +22,7 @@
 
 #include <gpiopin.h>
 #include <lightsensor.h>
+#include <thermosensor.h>
 
 #include <QtQml>
 #include <QQmlEngine>
@@ -42,4 +43,5 @@ void KGpioPlugin::registerTypes(const char *uri)
     qmlRegisterType<KGpioController>(uri, 1, 0, "KGpioController");
     qmlRegisterUncreatableType<GpioPin>(uri, 1, 0, "GpioPin", QStringLiteral("I can't do that, Dave."));
     qmlRegisterType<LightSensor>(uri, 1, 0, "LightSensor");
+    qmlRegisterType<ThermoSensor>(uri, 1, 0, "ThermoSensor");
 }
