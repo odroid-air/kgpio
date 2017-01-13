@@ -14,3 +14,8 @@ ecm_add_tests(
     LINK_LIBRARIES KF5::Gpio Qt5::Test
 )
 
+ecm_add_tests(
+    testthermosensor.cpp
+    LINK_LIBRARIES KF5::Gpio Qt5::Test
+)
+
