@@ -26,16 +26,58 @@ License along with this library.  If not, see <http://www.gnu.org/licenses/>.
 #include <QDebug>
 #include <QElapsedTimer>
 #include <QFileInfo>
+#include <QThread>
 #include <QTimer>
 
 
 namespace KGpio {
 
+static QString s_sysfsDevicesPath = QStringLiteral("/sys/bus/w1/devices/");
+
+class WorkerThread : public QThread
+{
+    Q_OBJECT
+
+public:
+    explicit WorkerThread(const QString &file, QObject *parent = 0):
+        QThread(parent)
+        , sysfsFile(file)
+    {
+        qDebug() << "Parent thread" << QThread::currentThreadId();
+    }
+
+    ~WorkerThread()
+    {
+        qDebug() << "Waiting until thread is done...";
+        wait();
+    }
+
+    void run() Q_DECL_OVERRIDE
+    {
+        QElapsedTimer t;
+        t.start();
+        //qDebug() << "Worker thread" << QThread::currentThreadId();
+        QFile d_file(sysfsFile);
+        d_file.open(QIODevice::ReadOnly | QIODevice::Text);
+        if(!d_file.isOpen()){
+            qDebug() << "- Error, unable to open" << sysfsFile << "for reading";
+            return;
+        }
+        QByteArray inputData = d_file.readAll();
+        //qDebug() << "Read information in msecs " << t.elapsed();// << inputData;
+        Q_EMIT valueRead(inputData);
+    }
+    QString sysfsFile;
+
+Q_SIGNALS:
+    void valueRead(const QByteArray &b);
+};
+
 ThermoSensor::ThermoSensor(QObject *parent)
     : QObject(parent)
     , d(new ThermoSensorPrivate(this))
 {
-    QDir devicesDir(d->sysfsDevicesPath);
+    QDir devicesDir(s_sysfsDevicesPath);
     d->availableSensorIds = devicesDir.entryList(QDir::NoDot | QDir::NoDotDot | QDir::Dirs);
     qDebug() << "New ThermoSensor" << d->availableSensorIds;
 }
@@ -69,7 +111,7 @@ void ThermoSensor::setSensorId(const QString &id)
             first = true;
         }
 
-        d->sysfsFile = QString(QStringLiteral("%1%2/w1_slave")).arg(d->sysfsDevicesPath, id);
+        d->sysfsFile = QString(QStringLiteral("%1%2/w1_slave")).arg(s_sysfsDevicesPath, id);
         if (!QFileInfo(d->sysfsFile).exists()) {
 
             qDebug() << "Error, sysfs file doesn't exist!" << d->sysfsFile;
@@ -79,7 +121,7 @@ void ThermoSensor::setSensorId(const QString &id)
 
         if (!d->pollTimer) {
             d->pollTimer = new QTimer(this);
-            d->pollTimer->setInterval(5000);
+            d->pollTimer->setInterval(1000);
             connect(d->pollTimer, &QTimer::timeout, this, [this] {
                     d->readTemperature();
                 }
@@ -87,10 +129,13 @@ void ThermoSensor::setSensorId(const QString &id)
             qDebug() << "timer set up";
             d->readTemperature();
         }
+        if (d->workerThread) {
+            d->workerThread->deleteLater();
+            d->workerThread = nullptr;
+        }
+
         if (first) {
-            qDebug() << "EMIT initialized";
             QTimer::singleShot(0, [this] { Q_EMIT initialized(); });
-            //Q_EMIT initialized();
         }
         d->pollTimer->start();
     }
@@ -105,46 +150,38 @@ void ThermoSensor::setTemperature(const qreal &temperature)
     }
 }
 
-bool ThermoSensorPrivate::readTemperature()
+void ThermoSensorPrivate::readTemperature()
 {
-    QFile d_file(sysfsFile);
-    //qDebug() << "reading ..." << sysfsFile;
-    d_file.open(QIODevice::ReadOnly | QIODevice::Text);
-    if(!d_file.isOpen()){
-        qDebug() << "- Error, unable to open" << sysfsFile << "for reading";
-        if (pollTimer) {
-            pollTimer->stop();
-        }
-        return false;
+    if (!workerThread) {
+        workerThread = new WorkerThread(sysfsFile, q);
+        QObject::connect(workerThread, &WorkerThread::valueRead, q, [this] (const QByteArray &raw) {
+                parseTemperature(raw);
+            }
+        );
     }
-    QByteArray inputData = d_file.readAll();
-    //qDebug() << "Read information: " << inputData;
-
-    q->setTemperature(parseTemperature(inputData));
-    return true;
+        //QObject::connect(d->workerThread, &WorkerThread::finished, d->workerThread, &QObject::deleteLater);
+    workerThread->start();
 }
 
-qreal ThermoSensorPrivate::parseTemperature(const QByteArray &raw) const
+void ThermoSensorPrivate::parseTemperature(const QByteArray &raw)
 {
     QString _in = QString::fromLocal8Bit(raw);
-    auto lst = _in.split(QStringLiteral(" "));
+    const auto &lst = _in.split(QStringLiteral(" "));
     _in = lst.last();
     //qDebug() << "lst ..." << _in;
     if (!_in.startsWith(QStringLiteral("t=")) || !_in.endsWith(QStringLiteral("\n"))) {
         qWarning() << "Error parsing string, expected \"t=12345\n\", but got" << _in;
-        return -1337.0;
+        return;
     }
     _in = _in.trimmed(); // kill \n
-    //qDebug() << "_in.trimmed()" << _in << _in.right(_in.count() - 2);
     _in = _in.right(_in.count() - 2);
 
-    int millidegree = _in.toInt();
-    qreal degree = (qreal)(millidegree) / 1000;
-    qDebug() << "degree ..." << _in << millidegree << degree;
-
-
-    return degree;
-
+    const int millidegree = _in.toInt();
+    const qreal degree = (qreal)(millidegree) / 1000;
+    //qDebug() << "degree ..." << _in << millidegree << degree;
+    q->setTemperature(degree);
 }
 
 } // ns
+
+#include "thermosensor.moc"

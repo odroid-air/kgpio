@@ -59,13 +59,14 @@ void TestThermoSensor::cleanupTestCase()
 void TestThermoSensor::testThermoSensor()
 {
     auto the = new ThermoSensor;
-    //QSignalSpy initSpy(the, &ThermoSensor::initialized);
+    QSignalSpy initSpy(the, &ThermoSensor::initialized);
     QSignalSpy tempSpy(the, &ThermoSensor::temperatureChanged);
 
     QVERIFY(the->availableSensorIds().count());
     const QString sensor_id = the->availableSensorIds().first();
     the->setSensorId(sensor_id);
-    //QVERIFY(tempSpy.wait(2000));
+    QVERIFY(initSpy.wait());
+    QVERIFY(tempSpy.wait(2000));
 
     QVERIFY(the->sensorId() == sensor_id);
     QVERIFY(the->temperature() > -100);
