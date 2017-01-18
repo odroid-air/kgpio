@@ -35,31 +35,26 @@ LightSensor::LightSensor(int id, QObject *parent)
     : GpioPin(id, parent)
     , d(new LightSensorPrivate(this))
 {
-    qDebug() << "New LightSensor" << id;
+    //qDebug() << "New LightSensor" << id;
     connect(this, &GpioPin::initialized, this, [this] {
-        qDebug() << " INIT LightSensor" << number();
+        qDebug() << " LightSensor initialized: " << number();
         d->elapsedSensorTimer = new QElapsedTimer();
         d->elapsedSensorTimer->start();
         d->valueMonitor = new QTimer(this);
-        d->valueMonitor->setInterval(10);
+        d->valueMonitor->setInterval(5);
         connect(d->valueMonitor, &QTimer::timeout, this, [this] {
                 d->updateValue();
             }
         );
-        //d->valueMonitor->start();
         setDirection(GpioPin::Out);
-        //setValue(GpioPin::Low);
-//         setValue(GpioPin::Low);
         setDirection(GpioPin::In);
-        //d->sampleTimer->start();
-        //d->updateValue();
 
         d->elapsedSensorTimer->start();
         d->valueMonitor->start();
     });
 
     d->sampleTimer = new QTimer(this);
-    d->sampleTimer->setInterval(100);
+    d->sampleTimer->setInterval(333);
     connect(d->sampleTimer, &QTimer::timeout, this, [this] {
         d->sampleTimer->stop();
         setDirection(GpioPin::In);
@@ -72,20 +67,17 @@ LightSensor::~LightSensor()
 {
     delete d->elapsedSensorTimer;
     delete d;
-    //GpioPin::~GpioPin();
 }
 
 void LightSensorPrivate::updateValue()
 {
-//     qDebug() << "up...";
-    //<< t << brightness;
     const auto val = q->value();
     if (val == GpioPin::High && elapsedSensorTimer->elapsed() > valueMonitor->interval()) {
-        auto t = elapsedSensorTimer->elapsed() - (valueMonitor->interval() / 2);
+        auto t = elapsedSensorTimer->elapsed();
         qreal new_brightness = 0;
         if (t > 0) {
             new_brightness = 1.0 / t;
-//             qDebug() << "Got an updated value" << t << brightness;
+            //qDebug() << "Got an updated value" << t << brightness;
         } else {
             new_brightness = 1;
 //             qDebug() << "Got an updated value 11111 .. Very bright??";
@@ -101,10 +93,6 @@ void LightSensorPrivate::updateValue()
             emit q->valueChanged();
             emit q->brightnessChanged();
         }
-        //qDebug() << "value low again?" << q->value();
-        //q->setValue(GpioPin::Low);
-//         q->setDirection(GpioPin::In);
-//         elapsedSensorTimer->start();
         sampleTimer->start();
     }
 }
