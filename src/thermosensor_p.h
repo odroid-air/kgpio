@@ -29,6 +29,8 @@ class QElapsedTimer;
 
 namespace KGpio {
 
+class WorkerThread;
+
 class ThermoSensorPrivate
 {
     Q_DECLARE_TR_FUNCTIONS(ThermoSensorPrivate)
@@ -43,13 +45,13 @@ public:
     }
     ThermoSensor* q;
 
-    bool readTemperature();
-    qreal parseTemperature(const QByteArray &raw) const;
+    void readTemperature();
+    void parseTemperature(const QByteArray &raw);
 
     QTimer *pollTimer = nullptr;
+    WorkerThread *workerThread = nullptr;
     QString sensorId;
     QString sysfsFile;
-    QString sysfsDevicesPath = QStringLiteral("/sys/bus/w1/devices/");
     QStringList availableSensorIds;
     qreal temperature = -999;
 };
