@@ -1,0 +1,4 @@
+SUBSYSTEM=="gpio", KERNEL=="gpio*",  ACTION=="add", PROGRAM="/home/sebas/gpio-prototype/scripts/set-gpio-permissions.sh %p"
+#SUBSYSTEM=="subsystem", KERNEL=="gpio*",  ACTION=="add", PROGRAM="/bin/sh -c 'chown -R sebas:users /sys%p'"
+#SUBSYSTEM=="gpio", KERNEL=="gpio*",  ACTION=="add", PROGRAM="/bin/sh -c 'chown -R sebas:users /sys%p/*'"
+#SUBSYSTEM=="gpio", KERNEL=="gpio*",  ACTION=="add", PROGRAM="/bin/sh -c 'chown -R sebas:users /sys/devices/virtual/gpio/*'"
